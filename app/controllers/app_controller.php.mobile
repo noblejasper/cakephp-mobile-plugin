@@ -1,0 +1,33 @@
+<?php 
+class AppController extends Controller {
+
+    function beforeFilter() {
+        if ( isset($this->Mobile) && $this->Mobile->is_mobile() ) {
+            $this->Auth->loginAction   = '/m/users/login';
+            $this->Auth->logoutAction  = '/m/users/logout';
+            $this->Auth->loginRedirect = '/m';
+        }
+        if ( $this->data && isset($this->Mobile) ) {
+            $this->data = $this->Mobile->inputFilter( $this->data );
+        }
+    }
+
+    function afterFilter() {
+        if ( isset($this->Mobile) && $this->Mobile->is_mobile() ) {
+            $this->output = $this->Mobile->afterFilter($this->output);
+        }
+    }
+
+    function redirect($url, $status = null, $exit = true){
+        if( isset($this->Mobile) && $this->Mobile->is_imode() ){
+            $url = Router::parse($url);
+            if( !isset($url['?']) ){
+                $url['?'] = array();
+            }
+            $url['?'][session_name()] = session_id();
+            $url = Router::url($url, true);
+        }
+        return parent::redirect($url, $status, $exit);
+    }
+}
+?>
