@@ -1,10 +1,4 @@
 <?php
-/**
- * includes
-if(!class_exists('lib3gk')){
-    require_once(VENDORS.'ecw'.DS.'lib3gk.php');
-}
- */
 
 define('CARRIER_UNKNOWN',  0);
 define('CARRIER_DOCOMO',   1);
@@ -14,9 +8,6 @@ define('CARRIER_EMOBILE',  4);
 define('CARRIER_IPHONE',   5);
 define('CARRIER_PHS',      6);
 
-/**
- * Ktai component class for CakePHP1.2
- */
 class MobileComponent extends Object {
 
     var $_carrier    = null;
@@ -32,9 +23,6 @@ class MobileComponent extends Object {
         'session_save'            => 'php',
     );
 
-    //--------------------------------------------------
-    //Initialize ktai library
-    //--------------------------------------------------
     function initialize(&$controller){
         $this->c = &$controller;
 
@@ -48,6 +36,7 @@ class MobileComponent extends Object {
             Configure::write('Session.save', 'mobile_session');
         }
     }
+
     function beforeRender() {
         if ( $this->is_mobile() && !isset($this->c->params['prefix']) ) {
             $this->c->redirect('/m' . env('REQUEST_URI'));
@@ -76,6 +65,9 @@ class MobileComponent extends Object {
 
         if ( $this->is_mobile() ) {
             $str = mb_convert_kana($str, 'KVrns', 'SJIS');
+
+            // TODO: 絵文字を%%MJxxx%%に変換しないと
+
             $str = mb_convert_encoding($str, "UTF-8", "SJIS");
         }
         else {
