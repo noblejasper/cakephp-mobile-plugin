@@ -1,0 +1,66 @@
+<?php
+class UsersController extends AppController {
+
+    var $name       = 'Users';
+    var $helpers    = array( 'Html', 'Form' );
+    var $components = array( 'Mobile', 'Auth' );
+
+    function beforeFilter() {
+        parent::beforeFilter();
+        $this->Auth->allow(array('register', 'mobile_register', 'mobile_login', 'mobile_easylogin'));
+        if ( $this->Mobile->is_mobile() ) {
+            $this->Auth->autoRedirect = false;
+        }
+    }
+
+    function login() {}
+
+    function mobile_login() {
+        if ( isset($this->data['User']['useuid']) && $this->data['User']['useuid'] && $this->Auth->user() ) {
+            $this->User->id = $this->Auth->user('id');
+            $this->User->saveField( 'utn', $this->Mobile->get_utn() );
+            $this->redirect($this->Auth->redirect(), null, true);
+        }
+    }
+
+    function mobile_easylogin() {
+        $utn  = $this->Mobile->get_utn();
+        $user = $this->User->find( 'first', array(
+            'conditions' => array( 'User.utn' => $utn )
+        ));
+        if ( $user ) {
+            $this->Auth->login($user['User']);
+            $this->redirect($this->Auth->redirect(), null, true);
+        }
+        else {
+            $this->Auth->loginError = 'かんたんログインに失敗しました。';
+            $this->Session->setFlash($this->Auth->loginError, 'default', array(), 'auth');
+            $this->redirect('/m/users/login');
+        }
+    }
+
+    //ログアウト
+    function logout(){
+        $this->Session->setFlash('ログアウトしました。');
+        $this->Auth->logout();
+        $this->redirect('/');
+    }
+
+    function mobile_logout() {
+        $this->Session->setFlash('ログアウトしました。');
+        $this->Auth->logout();
+        $this->redirect('/m');
+    }
+
+    function mobile_register() {
+        if ( !empty($this->data) ) {
+            if ( $this->User->regist($this->data) ) {
+                $this->Session->setFlash(__('登録完了', true));
+                $this->redirect('/m');
+            } else {
+                $this->Session->setFlash(__('ユーザー登録に失敗しました。再度お試しください。', true));
+            }
+        }
+    }
+}
+?>

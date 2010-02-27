@@ -7,15 +7,13 @@ class AppController extends Controller {
             $this->Auth->logoutAction  = '/m/users/logout';
             $this->Auth->loginRedirect = '/m';
         }
-        if ( $this->data && isset($this->Mobile) ) {
-            $this->data = $this->Mobile->inputFilter( $this->data );
+         if ( isset($this->Mobile) && $this->Mobile->is_mobile() ) {
+            $this->Mobile->beforeFilter();
         }
-    }
+   }
 
     function afterFilter() {
-        if ( isset($this->Mobile) && $this->Mobile->is_mobile() ) {
-            $this->output = $this->Mobile->afterFilter($this->output);
-        }
+        $this->Mobile->afterFilter();
     }
 
     function redirect($url, $status = null, $exit = true){
