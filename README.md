@@ -8,5 +8,5 @@ CakePHP を モバイル対応させるためのComponentです。
 参考にしたPHPライブラリさんたち
 ======================================================
 
-[Ktai Library for CakePHP1.2](http://blog.ecworks.jp/ktai)
-[絵文字変換ライブラリ HTML_Emoji](http://www.revulo.com/PHP/library/HTML_Emoji.html)
+* [Ktai Library for CakePHP1.2](http://blog.ecworks.jp/ktai)
+* [絵文字変換ライブラリ HTML_Emoji](http://www.revulo.com/PHP/library/HTML_Emoji.html)
