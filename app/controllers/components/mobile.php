@@ -1,11 +1,4 @@
 <?php
-/**
- * includes
-if(!class_exists('lib3gk')){
-    require_once(VENDORS.'ecw'.DS.'lib3gk.php');
-}
- */
-
 define('CARRIER_UNKNOWN',  0);
 define('CARRIER_DOCOMO',   1);
 define('CARRIER_KDDI',     2);
@@ -15,7 +8,7 @@ define('CARRIER_IPHONE',   5);
 define('CARRIER_PHS',      6);
 
 /**
- * Ktai component class for CakePHP1.2
+ * Mobile component class for CakePHP1.2
  */
 class MobileComponent extends Object {
 
@@ -50,6 +43,9 @@ class MobileComponent extends Object {
         }
     }
 
+    //------------------------------------------------
+    //
+    //------------------------------------------------
     function beforeRender() {
         if ( $this->is_mobile() && !isset($this->c->params['prefix']) ) {
             $this->c->redirect('/m' . env('REQUEST_URI'));
@@ -72,6 +68,9 @@ class MobileComponent extends Object {
         $this->c->set('is_imode', $this->is_imode());
     }
 
+    //------------------------------------------------
+    //
+    //------------------------------------------------
     function inputFilter($str) {
         if (is_array($str)) {
             return array_map( array($this,"inputFilter"), $str );
@@ -79,15 +78,42 @@ class MobileComponent extends Object {
 
         // 入力された絵文字はUnicodeで保存するためSJIS-win
         $str = mb_convert_kana($str, 'KVrns', 'SJIS-win');
-        $str = mb_convert_encoding($str, "UTF-8", "SJIS-win");
+        $sjismap = array();
+        $utf8map = array();
+        if ( $this->is_ezweb() ) {
+            $sjismap = array(
+                0xE234, 0xE272, 0x0A0C, 0xFFFF,
+                0xE273, 0xE2EF, 0x0A0D, 0xFFFF,
+                0xE2F0, 0xE32E, 0x0A50, 0xFFFF,
+                0xE32F, 0xE342, 0x0A51, 0xFFFF,
+                0xE468, 0xE4A6, 0x0AD8, 0xFFFF,
+                0xE4A7, 0xE523, 0x0AD9, 0xFFFF,
+                0xE524, 0xE562, 0x0B1C, 0xFFFF,
+                0xE563, 0xE5DF, 0x0B1D, 0xFFFF,
+            );
+            $utf8map = array(
+                0xEC40, 0xECFC, 0x0000, 0xFFFF,
+                0xED40, 0xED93, 0x0000, 0xFFFF,
+                0xEF40, 0xEFFC, 0x0000, 0xFFFF,
+                0xF040, 0xF0FC, 0x0000, 0xFFFF,
+            );
+            $str = mb_encode_numericentity($str, $sjismap, 'SJIS-win');
+            $str = mb_convert_encoding($str, "UTF-8", "SJIS-win");
+            $str = mb_decode_numericentity($str, $utf8map, 'UTF-8');
+        }
+        else {
+            $str = mb_convert_encoding($str, "UTF-8", "SJIS-win");
+        }
 
         $str = trim($str);
         $str = h($str);
         return $str;
     }
 
+    //------------------------------------------------
     // キャリアの数字を返す
     // 一番上にかいてあるdefineを参照
+    //------------------------------------------------
     function carrier() {
         if( $this->_carrier === null ) {
             $this->_carrier = $this->analyze_user_agent();
@@ -95,7 +121,9 @@ class MobileComponent extends Object {
         return $this->_carrier;
     }
 
+    //------------------------------------------------
     // UserAgent を解析してキャリアを分析
+    //------------------------------------------------
     function analyze_user_agent(){
         $carrier    = CARRIER_UNKNOWN;
         $user_agent = env('HTTP_USER_AGENT');
@@ -143,6 +171,9 @@ class MobileComponent extends Object {
         return $carrier;
     }
 
+    //------------------------------------------------
+    //
+    //------------------------------------------------
     function is_imode()   { return $this->carrier() == CARRIER_DOCOMO; }
     function is_softbank(){ return $this->carrier() == CARRIER_SOFTBANK || $this->is_iphone(); }
     function is_ezweb()   { return $this->carrier() == CARRIER_KDDI; }
@@ -156,16 +187,20 @@ class MobileComponent extends Object {
                 $this->is_iphone();
     }
 
+    //------------------------------------------------
     // beforeFilterで使う
     // if ( isset($this->Mobile) && $this->Mobile->is_mobile() ) {
     //     $this->Mobile->beforeFilter();
     // }
+    //------------------------------------------------
     function beforeFilter () {
         $this->c->data = $this->inputFilter( $this->c->data );
     }
 
+    //------------------------------------------------
     // afterFilterで使う
     // $this->Mobile->afterFilter();
+    //------------------------------------------------
     function afterFilter () {
         $_data = $this->c->output;
 
@@ -194,21 +229,54 @@ class MobileComponent extends Object {
 
             $_data = mb_convert_kana($_data, "kVrns", 'UTF-8');
             header ("Content-type: application/xhtml+xml; charset=Shift_JIS");
-            $this->c->output = mb_convert_encoding($_data, "SJIS-win", "UTF-8");
+            if ( $this->is_ezweb() ) {
+                $sjismap = array(
+                    0xE234, 0xE272, 0x0A0C, 0xFFFF,
+                    0xE273, 0xE2EF, 0x0A0D, 0xFFFF,
+                    0xE2F0, 0xE32E, 0x0A50, 0xFFFF,
+                    0xE32F, 0xE342, 0x0A51, 0xFFFF,
+                    0xE468, 0xE4A6, 0x0AD8, 0xFFFF,
+                    0xE4A7, 0xE523, 0x0AD9, 0xFFFF,
+                    0xE524, 0xE562, 0x0B1C, 0xFFFF,
+                    0xE563, 0xE5DF, 0x0B1D, 0xFFFF,
+                );
+                $utf8map = array(
+                    0xEC40, 0xECFC, 0x0000, 0xFFFF,
+                    0xED40, 0xED93, 0x0000, 0xFFFF,
+                    0xEF40, 0xEFFC, 0x0000, 0xFFFF,
+                    0xF040, 0xF0FC, 0x0000, 0xFFFF,
+                );
+                $_data = mb_encode_numericentity($_data, $utf8map, 'UTF-8');
+                $_data = mb_convert_encoding($_data, 'SJIS-win', 'UTF-8');
+                $this->c->output = mb_decode_numericentity($_data, $sjismap, 'SJIS-win');
+            }
+            else {
+                $this->c->output = mb_convert_encoding($_data, 'SJIS-win', 'UTF-8');
+            }
         }
         else {
             $this->c->output = $this->convertPC($_data);
         }
     }
 
+    //------------------------------------------------
+    //
+    //------------------------------------------------
     function convertPC($text) {
         return $this->convertCharacter($text);
     }
+
+    //------------------------------------------------
+    //
+    //------------------------------------------------
     function convertMobile($text) {
         $text = $this->changeEmoji($text);
         return $this->convertCharacter($text);
     }
 
+    //------------------------------------------------
+    //
+    //------------------------------------------------
     function changeEmoji($text) {
         include_once(VENDORS.'emoji'.DS. $this->carrier() .'.php');
         if ( preg_match_all("/%%(MJ[A-Z0-9]*)%%/", $text, $key, PREG_SET_ORDER) ) {
@@ -219,20 +287,25 @@ class MobileComponent extends Object {
         return $text;
     }
 
+    //------------------------------------------------
+    //
+    //------------------------------------------------
     function convertCharacter($text) {
         $pattern  = '/\xEE[\x80-\xBF][\x80-\xBF]|\xEF[\x81-\x83][\x80-\xBF]/';
         $callback = array($this, '_convertCharacter');
         return preg_replace_callback($pattern, $callback, $text);
     }
+
+    //------------------------------------------------
+    //
+    //------------------------------------------------
     function _convertCharacter($matches) {
         if (isset($this->_translationTable) === false) {
             $this->_initTranslationTable();
         }
-
         $utf8 = $matches[0];
         if (isset($this->_translationTable[$utf8]) === true) {
             $sjis = $this->_translationTable[$utf8];
-
             if ( !$this->is_mobile() ) {
                 list($width, $height) = $this->_getImageSize($sjis);
                 $sjis = '<img class="emoji"'
@@ -252,6 +325,10 @@ class MobileComponent extends Object {
             }
         }
     }
+
+    //------------------------------------------------
+    //
+    //------------------------------------------------
     function _initTranslationTable() {
         $aliases = array(
             CARRIER_UNKNOWN   => 'pc',
@@ -269,7 +346,6 @@ class MobileComponent extends Object {
         }
         $this->_translationTable = include VENDORS.'emoji'.DS. ucfirst($carrier) .'.php';
     }
-
     function _getImageSize($sjis) {
         $high = ord($sjis[0]);
 
@@ -299,6 +375,9 @@ class MobileComponent extends Object {
     }
 
 
+    //------------------------------------------------
+    //
+    //------------------------------------------------
     function get_utn(){
         $uid = false;
         if( $this->is_imode() ) {
@@ -322,6 +401,69 @@ class MobileComponent extends Object {
             }
         }
         return $uid;
+    }
+
+
+    //------------------------------------------------
+    //Checking iMODE email
+    //------------------------------------------------
+    function is_imode_email($email){
+        return stripos($email, '@docomo.ne.jp') !== false;
+    }
+    //------------------------------------------------
+    //Checking Softbank email
+    //------------------------------------------------
+    function is_softbank_email($email){
+        if(stripos($email, '@softbank.ne.jp') !== false) return true;
+        if( $this->is_iphone_email($email) ) return true;
+        return $this->is_vodafone_email($email);
+    }
+    //------------------------------------------------
+    //Checking iPhone email
+    //------------------------------------------------
+    function is_iphone_email($email){
+        return stripos($email, '@i.softbank.jp') !== false;
+    }
+    //------------------------------------------------
+    //Checking VODAFONE email
+    //  This is legacy function. 
+    //  Normally, use is_softbank_email()
+    //------------------------------------------------
+    function is_vodafone_email($email){
+        if(preg_match('/@[dhtckrsnq]\.vodafone\.ne\.jp/i', $email)) return true;
+        return $this->is_jphone_email($email);
+    }
+    //------------------------------------------------
+    //Checking JPHONE email
+    //  This is legacy function. 
+    //  Normally, use is_softbank_email()
+    //------------------------------------------------
+    function is_jphone_email($email){
+        return(preg_match('/@jp\-[dhtckrsnq]\.ne\.jp/i', $email)) ? true : false;
+    }
+    //------------------------------------------------
+    //Checking EZweb email
+    //------------------------------------------------
+    function is_ezweb_email($email){
+        return (stripos($email, '@ezweb.ne.jp') !== false) || 
+            (preg_match('/@[a-z-]{2,10}\.biz\.ezweb\.ne\.jp/i', $email) ? true : false);
+    }
+    //------------------------------------------------
+    //Checking EMOBILE email
+    //------------------------------------------------
+    function is_emobile_email($email){
+        return stripos($email, '@emnet.ne.jp') !== false;
+    }
+    //------------------------------------------------
+    //Checking Mobile email
+    //------------------------------------------------
+    function is_mobile_email($email){
+        return
+            $this->is_imode_email($email)    ||
+            $this->is_softbank_email($email) ||
+            $this->is_ezweb_email($email)    ||
+            $this->is_emobile_email($email)  ||
+            $this->is_iphone_email($email);
     }
 
 }
