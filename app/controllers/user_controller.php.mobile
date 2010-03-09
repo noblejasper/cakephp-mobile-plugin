@@ -40,13 +40,9 @@ class UsersController extends AppController {
     }
 
     //ログアウト
-    function logout(){
-        $this->Session->setFlash('ログアウトしました。');
-        $this->Auth->logout();
-        $this->redirect('/');
-    }
-
-    function mobile_logout() {
+    function        logout() { $this->__logout(); }
+    function mobile_logout() { $this->__logout(); }
+    function      __logout() {
         $this->Session->setFlash('ログアウトしました。');
         $this->Auth->logout();
         $this->redirect('/m');
