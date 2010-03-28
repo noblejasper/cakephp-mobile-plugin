@@ -101,12 +101,22 @@ class MobileComponent extends Object {
             $str = mb_convert_encoding($str, "UTF-8", "SJIS-win");
             $str = mb_decode_numericentity($str, $utf8map, 'UTF-8');
         }
+        elseif ( $this->is_softbank() ) {
+            $backup = mb_substitute_character();
+            mb_substitute_character('long');
+            $str = mb_convert_encoding($str, 'UTF-8', 'SJIS');
+            mb_substitute_character($backup);
+
+            $pattern  = '/BAD\+([0-9A-F]{4})/';
+            $callback = array($this, '_softbank_fallbackSjisToUtf8');
+            $str      = preg_replace_callback($pattern, $callback, $str);
+        }
         else {
             $str = mb_convert_encoding($str, "UTF-8", "SJIS-win");
         }
 
         $str = trim($str);
-        $str = h($str);
+        //$str = h($str);
         return $str;
     }
 
@@ -250,12 +260,87 @@ class MobileComponent extends Object {
                 $_data = mb_convert_encoding($_data, 'SJIS-win', 'UTF-8');
                 $this->c->output = mb_decode_numericentity($_data, $sjismap, 'SJIS-win');
             }
+            elseif( $this->is_softbank() ) {
+                $utf8map = array(
+                    0xE001, 0xE05A, 0x0000, 0xFFFF,
+                    0xE101, 0xE15A, 0x0000, 0xFFFF,
+                    0xE201, 0xE25A, 0x0000, 0xFFFF,
+                    0xE301, 0xE34D, 0x0000, 0xFFFF,
+                    0xE401, 0xE44C, 0x0000, 0xFFFF,
+                    0xE501, 0xE53E, 0x0000, 0xFFFF,
+                );
+                $_data = mb_encode_numericentity($_data, $utf8map, 'UTF-8');
+                $_data = mb_convert_encoding($_data, 'SJIS-win', 'UTF-8');
+
+                $pattern  = '/&#(5\d{4});/';
+                $callback = array($this, '_softbank_convertUnicodeToSjis');
+                $this->c->output = preg_replace_callback($pattern, $callback, $_data);
+            }
             else {
                 $this->c->output = mb_convert_encoding($_data, 'SJIS-win', 'UTF-8');
             }
         }
         else {
             $this->c->output = $this->convertPC($_data);
+        }
+    }
+
+    //------------------------------------------------
+    // This function converts Shift_JIS hexadecimal code to UTF-8 binary data.
+    //------------------------------------------------
+    function _softbank_fallbackSjisToUtf8( $matches ) {
+        $sjis = hexdec($matches[1]);
+        $high = $sjis >> 8;
+        $low  = $sjis & 0xFF;
+
+        if ( $low > 0xA0 ) {
+            if ($high === 0xF7 && $low <= 0xFA) {
+                $unicode = "\xE2" . chr($low - 0xA0);
+            } else if ($high === 0xF9 && $low <= 0xED) {
+                $unicode = "\xE3" . chr($low - 0xA0);
+            } else if ($high === 0xFB && $low <= 0xDE) {
+                $unicode = "\xE5" . chr($low - 0xA0);
+            }
+        }
+        elseif ( $low > 0x40 ) {
+            if ( $low >= 0x80 ) {
+                --$low;
+            }
+            if ( $high === 0xF7 && $low < 0x9B ) {
+                $unicode = "\xE1" . chr($low - 0x40);
+            }
+            elseif ( $high === 0xF9 && $low < 0x9B ) {
+                $unicode = "\xE0" . chr($low - 0x40);
+            }
+            elseif ( $high === 0xFB && $low < 0x8D ) {
+                $unicode = "\xE4" . chr($low - 0x40);
+            }
+        }
+        return mb_convert_encoding($unicode, 'UTF-8', 'UCS-2');
+    }
+
+    //------------------------------------------------
+    // This function converts Unicode decimal number to Shift_JIS binary data.
+    //------------------------------------------------
+    function _softbank_convertUnicodeToSjis( $matches ) {
+        $unicode = intval($matches[1]);
+        $high    = $unicode >> 8;
+        $low     = $unicode & 0xFF;
+
+        if ( $high === 0xE0 || $high === 0xE1 || $high === 0xE4 ) {
+            $low += 0x40;
+            if ($low >= 0x7F) { ++$low; }
+        }
+        else {
+            $low += 0xA0;
+        }
+
+        if ( $high === 0xE1 || $high === 0xE2 ) {
+            return "\xF7" . chr($low);
+        } else if ( $high === 0xE0 || $high === 0xE3 ) {
+            return "\xF9" . chr($low);
+        } else {
+            return "\xFB" . chr($low);
         }
     }
 
@@ -270,21 +355,7 @@ class MobileComponent extends Object {
     //
     //------------------------------------------------
     function convertMobile($text) {
-        $text = $this->changeEmoji($text);
         return $this->convertCharacter($text);
-    }
-
-    //------------------------------------------------
-    //
-    //------------------------------------------------
-    function changeEmoji($text) {
-        include_once(VENDORS.'emoji'.DS. $this->carrier() .'.php');
-        if ( preg_match_all("/%%(MJ[A-Z0-9]*)%%/", $text, $key, PREG_SET_ORDER) ) {
-            foreach ($key as $val) {
-                $text = str_replace($val[0], $CONFIG[$val[1]], $text);
-            }
-        }
-        return $text;
     }
 
     //------------------------------------------------
