@@ -177,7 +177,9 @@ class MobileComponent extends Object {
         elseif ( strpos($user_agent, 'DDIPOCKET') !== false ){
             $carrier = CARRIER_PHS;
         }
-
+        elseif ( strpos($user_agent, 'Googlebot-Mobile') !== false ){
+            $carrier = CARRIER_KDDI;
+        }
         return $carrier;
     }
 
@@ -225,7 +227,8 @@ class MobileComponent extends Object {
             $_data = str_replace("istyle=\"1\"", "style=\"-wap-input-format:&quot;*&lt;ja:h&gt;&quot;\"", $_data);
             $_data = str_replace("istyle=\"3\"", "style=\"-wap-input-format:&quot;*&lt;ja:en&gt;&quot;\"", $_data);
             $_data = str_replace("istyle=\"4\"", "style=\"-wap-input-format:&quot;*&lt;ja:n&gt;&quot;\"", $_data);
-            $_data = preg_replace("/<img src=\"(.+?)\.(gif)\"/", '<img src="\\1.png"', $_data);
+            // 最近は全部GIFっぽい
+            //$_data = preg_replace("/<img src=\"(.+?)\.(gif)\"/", '<img src="\\1.png"', $_data);
         }
         elseif( $this->is_softbank() ) {
             // SoftBank
